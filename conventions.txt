@@ -1,3 +1,3 @@
 Quaternions are defined as 
-q = [q1 q2 q3 q4]
-where q1 is the scalar part and [q2 q3 q4] is the vector part
+q = [q1 q2 q3 q4]'
+where q1 is the scalar part and [q2 q3 q4]' is the vector part
