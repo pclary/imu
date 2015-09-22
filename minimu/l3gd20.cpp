@@ -36,8 +36,14 @@ const uint8_t DURATION = 0x38;
 
 bool gyro_init()
 {
-    if (get_register(gyro_addr, WHO_AM_I) != 11010100)
+    if (get_register(gyro_addr, WHO_AM_I) != 0b11010100)
         return false;
 
+    set_register(gyro_addr, CTRL_REG1, 0xff);
+    set_register(gyro_addr, CTRL_REG2, 0x09);
+    set_register(gyro_addr, CTRL_REG3, 0x00);
+    set_register(gyro_addr, CTRL_REG4, 0x10);
+    set_register(gyro_addr, CTRL_REG5, 0x00);
+    
     return true;
 }
