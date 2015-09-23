@@ -73,18 +73,25 @@ bool mag_init()
 }
 
 
-union DataBuffer
+bool accel_data_ready()
 {
-    uint8_t u8[6];
-    int16_t i16[3];
-};
+    return get_register(accel_addr, STATUS_REG_A) & 0b00001000;
+}
+
+
+bool mag_data_ready()
+{
+    return get_register(mag_addr, SR_REG_M) & 0b00000001;
+}
 
 
 std::array<int16_t, 3> get_accel_data()
 {
-    DataBuffer buffer;
-    get_registers(accel_addr, OUT_X_L_A, buffer.u8, 6);
-    return {buffer.i16[0], buffer.i16[1], buffer.i16[2]};
+    uint8_t buffer[6] = {0, 1, 0, 2, 0, 3};
+    get_registers(accel_addr, OUT_X_L_A, buffer, 6);
+    return {int16_t(uint16_t(buffer[1]) << 8 | buffer[0]),
+            int16_t(uint16_t(buffer[3]) << 8 | buffer[2]),
+            int16_t(uint16_t(buffer[5]) << 8 | buffer[4])};
 }
 
 
@@ -92,7 +99,7 @@ std::array<int16_t, 3> get_mag_data()
 {
     uint8_t buffer[6];
     get_registers(mag_addr, OUT_X_H_M, buffer, 6);
-    return {int16_t(uint16_t(buffer[0]) << 16 & buffer[1]),
-            int16_t(uint16_t(buffer[2]) << 16 & buffer[3]),
-            int16_t(uint16_t(buffer[4]) << 16 & buffer[5])};
+    return {int16_t(uint16_t(buffer[0]) << 8 | buffer[1]),
+            int16_t(uint16_t(buffer[2]) << 8 | buffer[3]),
+            int16_t(uint16_t(buffer[4]) << 8 | buffer[5])};
 }

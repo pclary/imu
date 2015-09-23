@@ -45,16 +45,17 @@ bool gyro_init()
 }
 
 
-union DataBuffer
+bool gyro_data_ready()
 {
-    uint8_t u8[6];
-    int16_t i16[3];
-};
+    return get_register(gyro_addr, STATUS_REG) & 0b00001000;
+}
 
 
 std::array<int16_t, 3> get_gyro_data()
 {
-    DataBuffer buffer;
-    get_registers(gyro_addr, OUT_X_L, buffer.u8, 6);
-    return {buffer.i16[0], buffer.i16[1], buffer.i16[2]};
+    uint8_t buffer[6];
+    get_registers(gyro_addr, OUT_X_L, buffer, 6);
+    return {int16_t(uint16_t(buffer[1]) << 8 | buffer[0]),
+            int16_t(uint16_t(buffer[3]) << 8 | buffer[2]),
+            int16_t(uint16_t(buffer[5]) << 8 | buffer[4])};
 }

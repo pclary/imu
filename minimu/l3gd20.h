@@ -6,7 +6,7 @@
 
 
 bool gyro_init();
-
+bool gyro_data_ready();
 std::array<int16_t, 3> get_gyro_data();
 
 
