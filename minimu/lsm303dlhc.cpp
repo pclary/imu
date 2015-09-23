@@ -1,7 +1,6 @@
 #include "lsm303dlhc.h"
 #include <i2c_t3.h>
 #include "i2c_utils.h"
-#include <cstdint>
 
 
 const uint8_t accel_addr = 0b0011001;
@@ -57,11 +56,43 @@ const uint8_t TEMP_OUT_L_M = 0x32;
 
 bool accel_init()
 {
+    set_register(accel_addr, CTRL_REG1_A, 0x97);
+    set_register(accel_addr, CTRL_REG4_A, 0x18);
+    
     return true;
 }
 
 
 bool mag_init()
 {
+    set_register(mag_addr, CRA_REG_M, 0x1c);
+    set_register(mag_addr, CRB_REG_M, 0xe0);
+    set_register(mag_addr, CRB_REG_M, 0x00);
+    
     return true;
+}
+
+
+union DataBuffer
+{
+    uint8_t u8[6];
+    int16_t i16[3];
+};
+
+
+std::array<int16_t, 3> get_accel_data()
+{
+    DataBuffer buffer;
+    get_registers(accel_addr, OUT_X_L_A, buffer.u8, 6);
+    return {buffer.i16[0], buffer.i16[1], buffer.i16[2]};
+}
+
+
+std::array<int16_t, 3> get_mag_data()
+{
+    uint8_t buffer[6];
+    get_registers(mag_addr, OUT_X_H_M, buffer, 6);
+    return {int16_t(uint16_t(buffer[0]) << 16 & buffer[1]),
+            int16_t(uint16_t(buffer[2]) << 16 & buffer[3]),
+            int16_t(uint16_t(buffer[4]) << 16 & buffer[5])};
 }

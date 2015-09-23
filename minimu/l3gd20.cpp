@@ -1,7 +1,6 @@
 #include "l3gd20.h"
 #include <i2c_t3.h>
 #include "i2c_utils.h"
-#include <cstdint>
 
 
 const uint8_t gyro_addr = 0b1101011;
@@ -40,10 +39,22 @@ bool gyro_init()
         return false;
 
     set_register(gyro_addr, CTRL_REG1, 0xff);
-    set_register(gyro_addr, CTRL_REG2, 0x09);
-    set_register(gyro_addr, CTRL_REG3, 0x00);
     set_register(gyro_addr, CTRL_REG4, 0x10);
-    set_register(gyro_addr, CTRL_REG5, 0x00);
     
     return true;
+}
+
+
+union DataBuffer
+{
+    uint8_t u8[6];
+    int16_t i16[3];
+};
+
+
+std::array<int16_t, 3> get_gyro_data()
+{
+    DataBuffer buffer;
+    get_registers(gyro_addr, OUT_X_L, buffer.u8, 6);
+    return {buffer.i16[0], buffer.i16[1], buffer.i16[2]};
 }
