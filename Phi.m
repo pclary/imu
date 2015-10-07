@@ -16,6 +16,6 @@ c = cos(theta);
 s = sin(theta);
 
 out = [c      -s*n(1) -s*n(2) -s*n(3);
-       s*n(1)  c      -s*n(3)  s*n(2);
-       s*n(2)  s*n(3)  c      -s*n(1);
-       s*n(3)  s*n(2)  s*n(1)  c     ];
+       s*n(1)  c       s*n(3) -s*n(2);
+       s*n(2) -s*n(3)  c       s*n(1);
+       s*n(3)  s*n(2) -s*n(1)  c     ];
