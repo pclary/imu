@@ -28,7 +28,11 @@ classdef IMUFilter < handle
         end
         function AccelUpdate(obj, accel)
             % Measured and predicted gravity vector resolved in body frame
-            gmeas = accel/norm(accel);
+            na = norm(accel);
+            if na == 0
+                return;
+            end
+            gmeas = accel/na;
             gpred = quatrotate([0; 0; 1], quatconj(obj.q));
             
             % Get axis/angle that corrects for difference
@@ -50,7 +54,11 @@ classdef IMUFilter < handle
             mag = mag - zworld*dot(mag, zworld);
             
             % Measured and predicted compass vector resolved in body frame
-            mmeas = mag/norm(mag);
+            nm = norm(mag);
+            if nm == 0
+                return;
+            end
+            mmeas = mag/nm;
             mpred = quatrotate([1; 0; 0], quatconj(obj.q));
             
             % Get axis/angle that corrects for difference
@@ -83,7 +91,6 @@ end
 function qc = quatconj(q)
 % Quaternion conjugate (also =inverse for unit quaternions)
 qc = [q(1); -q(2:4)];
-
 end
 
 
@@ -102,14 +109,14 @@ if w ~= 0
 else
     n = [1; 0; 0];
 end
-th = w*dt/2;
+th = w*dt;
 q = aa2quat(n, th);
 end
 
 
 function q = aa2quat(n, th)
 % Convert axis/angle rotation to quaternion
-q = [cos(th); n(:)*sin(th)];
+q = [cos(th/2); n(:)*sin(th/2)];
 end
 
 
@@ -122,6 +129,6 @@ if norm(v3) ~= 0;
 else
     n = [1; 0; 0];
 end
-den = norm(v1)*norm(v2);
-th = atan2(nv3/den, dot(v1, v2)/den);
+th = atan2(nv3, dot(v1, v2));
 end
+

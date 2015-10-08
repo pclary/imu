@@ -71,7 +71,7 @@ block.Dwork(1).Complexity = 'Real';
 function Start(block)
 
 % Initialize filter object and store in UserData
-ekf = KalmanFilter([1; 0; 0; 0], zeros(4));
+ekf = ExtendedKalmanFilter([1; 0; 0; 0], zeros(4));
 set_param(block.BlockHandle, 'UserData', ekf);
 
 % Initialize previous time variable
@@ -80,6 +80,10 @@ block.Dwork(1).Data = 0;
 % Set filter parameters
 ekf.Q = block.DialogPrm(2).Data;
 ekf.R = block.DialogPrm(3).Data;
+ekf.f = @f;
+ekf.h = @h;
+ekf.Ffun = @F;
+ekf.Hfun = @H;
 
 
 function Outputs(block)
@@ -103,9 +107,7 @@ mag = block.InputPort(3).Data;
 
 % Update filter
 ekf = get_param(block.BlockHandle, 'UserData');
-ekf.F = update_model(gyro*block.DialogPrm(4).Data, dt);
-ekf.Predict();
-ekf.H = measurement_model(ekf.x);
+ekf.Predict([gyro*block.DialogPrm(4).Data; dt]);
 ekf.Update([accel/norm(accel); mag/norm(mag)]);
 ekf.x = ekf.x/norm(ekf.x);
 
@@ -114,35 +116,79 @@ function Terminate(block)
 
 
 
-function F = update_model(wb, dt)
+function xnew = f(x, u)
+% Model update function
+xnew = quatmul(x, velquat(u(1:3), u(4)));
 
-if ~all(size(wb) == [3, 1])
-    error('Body angular acceleration wb must be a 3x1 vector');
+
+function zpred = h(x)
+% Measurement prediction function
+gpred = quatrotate([0; 0; 1], quatconj(x));
+mpred = quatrotate([1; 0; 0], quatconj(x));
+zpred = [gpred; mpred];
+
+
+function out = F(u)
+% Jacobian of model update function
+w = norm(u(1:3));
+if w ~= 0
+    n = u(1:3)/w;
+else
+    n = [1; 0; 0];
 end
+    
+th = w*u(4)/2;
+c = cos(th);
+s = sin(th);
 
+out = [c      -s*n(1) -s*n(2) -s*n(3);
+       s*n(1)  c       s*n(3) -s*n(2);
+       s*n(2) -s*n(3)  c       s*n(1);
+       s*n(3)  s*n(2) -s*n(1)  c     ];
+
+
+function out = H(x)
+% Jacobian of measurement prediction function
+out = [2*[-x(3)  x(4) -x(1)  x(2);
+           x(2)  x(1)  x(4)  x(3);
+           x(1) -x(2) -x(2)  x(4)];
+       2*[ x(1)  x(2) -x(3) -x(4);
+          -x(4)  x(3)  x(2) -x(1);
+           x(3)  x(4)  x(1)  x(2)]];
+
+
+function q = quatmul(a, b)
+% Add rotation a onto rotation b (quaternion multiplication)
+q = [a(1)*b(1) - a(2)*b(2) - a(3)*b(3) - a(4)*b(4); ...
+    a(1)*b(2) + a(2)*b(1) + a(3)*b(4) - a(4)*b(3); ...
+    a(1)*b(3) - a(2)*b(4) + a(3)*b(1) + a(4)*b(2); ...
+    a(1)*b(4) + a(2)*b(3) - a(3)*b(2) + a(4)*b(1)];
+
+
+function qc = quatconj(q)
+% Quaternion conjugate (also =inverse for unit quaternions)
+qc = [q(1); -q(2:4)];
+
+
+function vrot = quatrotate(v, q)
+% Rotate vector v by quaternion q
+temp = quatmul(quatmul(q, [0; v]), quatconj(q));
+vrot = temp(2:4);
+
+
+function q = velquat(wb, dt)
+% Integrate angular velocity over dt to get quaternion rotation
 w = norm(wb);
 if w ~= 0
     n = wb/w;
 else
     n = [1; 0; 0];
 end
-    
-theta = w*dt/2;
-c = cos(theta);
-s = sin(theta);
-
-F = [c      -s*n(1) -s*n(2) -s*n(3);
-     s*n(1)  c       s*n(3) -s*n(2);
-     s*n(2) -s*n(3)  c       s*n(1);
-     s*n(3)  s*n(2) -s*n(1)  c     ];
+th = w*dt;
+q = aa2quat(n, th);
 
 
-function H = measurement_model(x)
-        
-H = [2*[-x(3)  x(4) -x(1)  x(2);
-         x(2)  x(1)  x(4)  x(3);
-         x(1) -x(2) -x(2)  x(4)];
-     2*[ x(1)  x(2) -x(3) -x(4);
-        -x(4)  x(3)  x(2) -x(1);
-         x(3)  x(4)  x(1)  x(2)]];
+function q = aa2quat(n, th)
+% Convert axis/angle rotation to quaternion
+q = [cos(th/2); n(:)*sin(th/2)];
 
