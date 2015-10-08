@@ -15,8 +15,9 @@ classdef IMUFilter < handle
     end
     
     methods
-        function obj = IMUFilter()
-            
+        function obj = IMUFilter(q0, v0)
+            obj.q = q0;
+            obj.variance = v0;
         end
         function GyroUpdate(obj, gyro, dt)
             % Rotate state estimate by integrated angular velocity
